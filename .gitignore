@@ -1,0 +1,5 @@
+out/
+dist/
+preview_300.png
+transcripts.tar.gz
+.DS_Store
