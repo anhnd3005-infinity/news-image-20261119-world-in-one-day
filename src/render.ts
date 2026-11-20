@@ -9,42 +9,45 @@ const OUT_ASSET = join(ROOT_DIR, 'entry.png');
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const MAX_BYTES = 1048576;
 
-type BeatKey = 'diplomacy' | 'markets' | 'law' | 'culture' | 'conflict' | 'climate';
+type RegionKey = 'americas' | 'europe' | 'mideast' | 'africa' | 'asia' | 'oceania';
 
-const BEAT_COLOR: Record<BeatKey, string> = {
-  diplomacy: '#163F6B',
-  markets: '#9A550A',
-  law: '#244A73',
-  culture: '#632968',
-  conflict: '#A12126',
-  climate: '#165E4A',
+const REGION_COLOR: Record<RegionKey, string> = {
+  americas: '#B34717',
+  europe: '#163F6B',
+  mideast: '#A12126',
+  africa: '#8A5A00',
+  asia: '#165E4A',
+  oceania: '#5E2B6B',
 };
 
 interface MapPin {
   id: number;
   lon: number;
   lat: number;
-  beat: BeatKey;
-  hero?: boolean;
+  region: RegionKey;
+  lead?: boolean;
 }
 
-// 12 exact, non-overlapping cartographic anchors matching numbered stories #1–#12.
+// 16 non-overlapping coordinate pins colored by continent/region matching numbered dispatches #1–#16.
 const MAP_PINS: MapPin[] = [
-  { id: 1, lon: 114.1, lat: 22.5, beat: 'diplomacy', hero: true }, // Shenzhen APEC summit
-  { id: 2, lon: -74.0, lat: 40.7, beat: 'markets', hero: true },   // New York (Anthropic IPO / Dow <50k)
-  { id: 3, lon: 4.3, lat: 52.1, beat: 'law', hero: true },         // The Hague (ICJ Myanmar genocide ruling)
-  { id: 4, lon: 35.0, lat: 47.0, beat: 'conflict', hero: true },   // Ukraine / Kerch Bridge / Kyiv
-  { id: 5, lon: 55.8, lat: 25.5, beat: 'conflict', hero: true },   // Strait of Hormuz / Gulf / Gaza
-  { id: 6, lon: 29.0, lat: 36.5, beat: 'climate', hero: true },    // Antalya COP31
-  { id: 7, lon: 86.5, lat: 16.5, beat: 'climate', hero: true },    // Bay of Bengal / Odisha Cyclone Akvan
-  { id: 8, lon: -78.5, lat: -0.2, beat: 'diplomacy' },             // Quito Ecuador / Colombia / Chile FTA
-  { id: 9, lon: 7.5, lat: 9.1, beat: 'diplomacy' },                // Abuja Nigeria (state police / illicit gold)
-  { id: 10, lon: 28.0, lat: -26.2, beat: 'markets' },              // Johannesburg South Africa (SARB)
-  { id: 11, lon: 127.0, lat: 37.6, beat: 'law' },                  // Seoul South Korea (Han Duck-soo ruling)
-  { id: 12, lon: 151.2, lat: -33.9, beat: 'culture' },             // Oceania Sydney/NZ (GTA VI rollout & Walkleys)
+  { id: 1, lon: 114.1, lat: 22.5, region: 'asia', lead: true },    // Shenzhen 3-way APEC declaration
+  { id: 2, lon: 2.5, lat: 53.0, region: 'europe', lead: true },    // The Hague ICJ Myanmar verdict
+  { id: 3, lon: -73.5, lat: 40.7, region: 'americas', lead: true },// New York Dow <50k & Anthropic IPO
+  { id: 4, lon: 28.5, lat: 36.5, region: 'mideast', lead: true },  // Antalya COP31 draft
+  { id: 5, lon: 86.5, lat: 16.5, region: 'asia', lead: true },     // Bay of Bengal / Odisha Cyclone Akvan
+  { id: 6, lon: 36.5, lat: 48.0, region: 'europe' },               // Kerch Bridge & Kyiv raid
+  { id: 7, lon: 56.5, lat: 25.0, region: 'mideast' },              // Strait of Hormuz tanker mines
+  { id: 8, lon: 18.0, lat: 55.0, region: 'europe' },               // Berlin 30-nation Ukraine summit
+  { id: 9, lon: -78.5, lat: -0.2, region: 'americas' },            // Quito Ecuador / Colombia / Chile FTA
+  { id: 10, lon: 7.5, lat: 9.1, region: 'africa' },                // Abuja Nigeria state police
+  { id: 11, lon: 28.0, lat: -26.2, region: 'africa' },             // Johannesburg South Africa SARB
+  { id: 12, lon: 38.0, lat: -1.3, region: 'africa' },              // Kenya marathon EPO ban
+  { id: 13, lon: 127.5, lat: 37.6, region: 'asia' },               // Seoul Han Duck-soo ruling
+  { id: 14, lon: 121.0, lat: -8.5, region: 'asia' },               // Flores Indonesia M5.9 quake
+  { id: 15, lon: 151.2, lat: -33.9, region: 'oceania' },           // Sydney/NZ GTA VI rollout & Walkleys
+  { id: 16, lon: -99.0, lat: 30.0, region: 'americas' },           // Texas J&J OTTAVA robotic surgery
 ];
 
-// Detailed generalized landmass polygons in [lon, lat].
 const CONTINENTS: Array<Array<[number, number]>> = [
   // North & Central America
   [
@@ -56,7 +59,6 @@ const CONTINENTS: Array<Array<[number, number]>> = [
     [-117, 32], [-124, 41], [-125, 49], [-137, 58], [-152, 60], [-162, 55],
   ],
   [[-84, 22], [-75, 20], [-76, 22], [-84, 23]],
-  // Greenland
   [[-52, 60], [-42, 60], [-20, 71], [-22, 81], [-45, 82], [-66, 77], [-54, 68]],
   // South America
   [
@@ -71,10 +73,9 @@ const CONTINENTS: Array<Array<[number, number]>> = [
     [58, 52], [44, 44], [38, 45], [30, 46], [28, 41], [23, 37], [19, 40],
     [16, 38], [18, 41], [14, 41], [12, 45], [8, 44], [3, 42], [-2, 37],
   ],
-  // Great Britain & Ireland
   [[-6, 50], [2, 51], [0, 56], [-5, 58], [-7, 54]],
   [[-10, 52], [-6, 52], [-6, 55], [-10, 54]],
-  // Africa
+  // Africa & Madagascar
   [
     [-17, 15], [-16, 23], [-6, 36], [10, 37], [12, 33], [25, 32], [33, 31],
     [38, 22], [43, 12], [51, 12], [45, 2], [40, -10], [35, -24], [28, -33],
@@ -90,12 +91,11 @@ const CONTINENTS: Array<Array<[number, number]>> = [
     [141, 52], [160, 60], [176, 66], [162, 70], [128, 72], [98, 76], [70, 72],
     [58, 69], [58, 52], [44, 44], [38, 45], [32, 41],
   ],
-  // Japan, Philippines, Indonesia
+  // Japan, Philippines, Indonesia, Australia, NZ
   [[130, 32], [136, 34], [141, 38], [145, 44], [141, 45], [139, 39], [132, 34]],
   [[120, 18], [124, 14], [126, 7], [122, 8], [120, 14]],
   [[96, 5], [104, 1], [106, -6], [114, -8], [116, -2], [106, -4], [98, 1]],
   [[109, 1], [117, 6], [118, 1], [114, -3], [110, -3]],
-  // Australia & New Zealand
   [
     [114, -22], [122, -17], [131, -12], [137, -15], [142, -11], [146, -18],
     [153, -27], [150, -37], [141, -38], [135, -34], [125, -33], [115, -34],
@@ -108,21 +108,21 @@ function loadArtDataUri(filename: string): string {
   return `data:image/jpeg;base64,${bytes.toString('base64')}`;
 }
 
-function project(lon: number, lat: number, w = 372, h = 204): [number, number] {
+function project(lon: number, lat: number, w = 376, h = 196): [number, number] {
   const x = ((lon + 168) / 352) * w;
   const y = ((78 - lat) / 134) * h;
   return [Number(x.toFixed(1)), Number(y.toFixed(1))];
 }
 
 function buildWorldMapSvg(): string {
-  const w = 372;
-  const h = 204;
+  const w = 376;
+  const h = 196;
 
   const gridLines: string[] = [];
   for (const lat of [-30, 0, 30, 60]) {
     const [, y] = project(0, lat, w, h);
     gridLines.push(
-      `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${lat === 0 ? '#A5BBC9' : '#C5D5E0'}" stroke-width="${lat === 0 ? '0.95' : '0.6'}" stroke-dasharray="${lat === 0 ? '4,3' : '2,3'}"/>`
+      `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${lat === 0 ? '#A3BAC9' : '#C5D5E0'}" stroke-width="${lat === 0 ? '0.9' : '0.6'}" stroke-dasharray="${lat === 0 ? '4,3' : '2,3'}"/>`
     );
   }
   for (const lon of [-120, -60, 0, 60, 120]) {
@@ -134,7 +134,7 @@ function buildWorldMapSvg(): string {
 
   const landHalos = CONTINENTS.map((poly) => {
     const pts = poly.map(([lon, lat]) => project(lon, lat, w, h));
-    return `<polygon points="${pts.map(([x, y]) => `${x},${y}`).join(' ')}" fill="none" stroke="#B7CAD7" stroke-width="2.5" stroke-linejoin="round"/>`;
+    return `<polygon points="${pts.map(([x, y]) => `${x},${y}`).join(' ')}" fill="none" stroke="#B7CAD7" stroke-width="2.4" stroke-linejoin="round"/>`;
   }).join('');
 
   const landShapes = CONTINENTS.map((poly) => {
@@ -143,7 +143,7 @@ function buildWorldMapSvg(): string {
   }).join('');
 
   const regionTags = [
-    { text: 'N. AMERICA', lon: -108, lat: 46 },
+    { text: 'N. AMERICA', lon: -108, lat: 49 },
     { text: 'S. AMERICA', lon: -53, lat: -15 },
     { text: 'AFRICA', lon: 22, lat: 14 },
     { text: 'EURASIA', lon: 84, lat: 57 },
@@ -151,29 +151,29 @@ function buildWorldMapSvg(): string {
   ]
     .map((r) => {
       const [rx, ry] = project(r.lon, r.lat, w, h);
-      return `<text x="${rx}" y="${ry}" text-anchor="middle" font-family="Avenir Next Condensed, Helvetica Neue, sans-serif" font-size="6.8" font-weight="800" letter-spacing="1.1" fill="#6E6554" opacity="0.82">${r.text}</text>`;
+      return `<text x="${rx}" y="${ry}" text-anchor="middle" font-family="Avenir Next Condensed, Helvetica Neue, sans-serif" font-size="6.8" font-weight="800" letter-spacing="1.05" fill="#6E6554" opacity="0.82">${r.text}</text>`;
     })
     .join('');
 
-  // Dotted legal arc linking ICJ The Hague (#3) to Myanmar (Rohingya verdict).
-  const [hx, hy] = project(4.3, 52.1, w, h);
+  // Dotted arc connecting ICJ verdict in The Hague (#2) to Myanmar.
+  const [hx, hy] = project(2.5, 53.0, w, h);
   const [mx, my] = project(96.0, 20.0, w, h);
   const icjArc = `
-    <path d="M ${hx} ${hy} Q ${(hx + mx) / 2} ${Math.min(hy, my) - 18} ${mx} ${my}" fill="none" stroke="#244A73" stroke-width="1.1" stroke-dasharray="3,2.5" opacity="0.75"/>
-    <circle cx="${mx}" cy="${my}" r="3.4" fill="#244A73" stroke="#F6F2E9" stroke-width="1"/>`;
+    <path d="M ${hx} ${hy} Q ${(hx + mx) / 2} ${Math.min(hy, my) - 16} ${mx} ${my}" fill="none" stroke="#163F6B" stroke-width="1.05" stroke-dasharray="3,2.5" opacity="0.72"/>
+    <circle cx="${mx}" cy="${my}" r="3.2" fill="#163F6B" stroke="#F6F2E9" stroke-width="1"/>`;
 
-  const sortedPins = [...MAP_PINS].sort((a, b) => Number(!!a.hero) - Number(!!b.hero));
+  const sortedPins = [...MAP_PINS].sort((a, b) => Number(!!a.lead) - Number(!!b.lead));
   const pins = sortedPins
     .map((pin) => {
       const [cx, cy] = project(pin.lon, pin.lat, w, h);
-      const fill = BEAT_COLOR[pin.beat];
-      const r = pin.hero ? 7.8 : 6.7;
-      const fs = pin.hero ? 8.4 : 7.3;
+      const fill = REGION_COLOR[pin.region];
+      const r = pin.lead ? 7.6 : 6.4;
+      const fs = pin.lead ? 8.1 : 6.9;
       return `
         <g>
-          ${pin.hero ? `<circle cx="${cx}" cy="${cy}" r="11.4" fill="${fill}" opacity="0.22"/>` : ''}
-          <circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="#F6F2E9" stroke-width="1.3"/>
-          <text x="${cx}" y="${cy + (pin.hero ? 2.9 : 2.5)}" text-anchor="middle" font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="${fs}" font-weight="800" fill="#FFFFFF">${pin.id}</text>
+          ${pin.lead ? `<circle cx="${cx}" cy="${cy}" r="10.8" fill="${fill}" opacity="0.20"/>` : ''}
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="#F6F2E9" stroke-width="1.2"/>
+          <text x="${cx}" y="${cy + (pin.lead ? 2.8 : 2.4)}" text-anchor="middle" font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="${fs}" font-weight="800" fill="#FFFFFF">${pin.id}</text>
         </g>`;
     })
     .join('');
@@ -189,12 +189,20 @@ function buildWorldMapSvg(): string {
     </svg>`;
 }
 
+function pinBadge(id: number, region: RegionKey): string {
+  return `<span class="pin-badge" style="background:${REGION_COLOR[region]};">${id}</span>`;
+}
+
+function statusTag(kind: 'C' | '?'): string {
+  return kind === 'C'
+    ? `<span class="tag-c" title="Confirmed">C</span>`
+    : `<span class="tag-q" title="Claimed / Disputed">?</span>`;
+}
+
 function buildHtml(): string {
   const artShenzhen = loadArtDataUri('art-shenzhen.jpg');
-  const artAnthropic = loadArtDataUri('art-anthropic.jpg');
   const artIcj = loadArtDataUri('art-icj.jpg');
-  const artGtavi = loadArtDataUri('art-gtavi.jpg');
-  const artConflict = loadArtDataUri('art-conflict.jpg');
+  const artAnthropic = loadArtDataUri('art-anthropic.jpg');
   const artClimate = loadArtDataUri('art-climate.jpg');
   const worldMap = buildWorldMapSvg();
 
@@ -215,10 +223,9 @@ function buildHtml(): string {
     -webkit-font-smoothing: antialiased;
   }
   .page {
-    position: relative;
     width: 1024px;
     height: 1024px;
-    padding: 7px 15px 6px 15px;
+    padding: 6px 14px 5px 14px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -227,50 +234,50 @@ function buildHtml(): string {
     background: radial-gradient(circle at 50% 0%, #FAF7F0 0%, #F5F0E5 62%, #EFE8D9 100%);
   }
 
-  /* MASTHEAD + DATE CHECK */
+  /* BAND 1: MASTHEAD */
   .masthead {
     border-bottom: 2px solid #121821;
-    padding-bottom: 3.5px;
+    padding-bottom: 3px;
   }
   .folio-strip {
     display: flex;
     justify-content: space-between;
     font-family: "Avenir Next Condensed", "DIN Alternate", sans-serif;
-    font-size: 9.4px;
+    font-size: 9.2px;
     font-weight: 700;
-    letter-spacing: 1.15px;
-    color: #424C5C;
+    letter-spacing: 1px;
+    color: #3E4858;
     border-bottom: 1px solid #C8BFA8;
     padding-bottom: 2px;
-    margin-bottom: 2.5px;
+    margin-bottom: 2px;
     text-transform: uppercase;
   }
   .title-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: 12px;
   }
   .title-main {
     font-family: "Bodoni 72", "Big Caslon", "Didot", Georgia, serif;
-    font-size: 39px;
+    font-size: 38px;
     font-weight: 800;
     letter-spacing: -0.4px;
-    line-height: 0.96;
+    line-height: 0.95;
     color: #121821;
   }
   .date-plaque {
     background: #9E1F24;
     color: #FFFFFF;
-    padding: 3.5px 13px;
+    padding: 3px 13px;
     border: 2px solid #121821;
     box-shadow: inset 0 0 0 1px #D8A449;
     text-align: center;
     flex-shrink: 0;
   }
   .date-day {
-    font-family: "Avenir Next Condensed", "DIN Alternate", sans-serif;
-    font-size: 9.8px;
+    font-family: "Avenir Next Condensed", sans-serif;
+    font-size: 9.5px;
     font-weight: 800;
     letter-spacing: 2.3px;
     color: #FCE3A6;
@@ -278,342 +285,365 @@ function buildHtml(): string {
   }
   .date-num {
     font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif;
-    font-size: 21px;
+    font-size: 20.5px;
     font-weight: 700;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.55px;
     line-height: 1.02;
   }
-  .date-check-bar {
+
+  /* BAND 2: UTC TIMELINE */
+  .utc-strip {
     background: #141E2B;
     color: #F6F2E9;
-    padding: 2.5px 9px;
+    padding: 3px 8px;
+    border-left: 4px solid #D8A449;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-family: "Avenir Next Condensed", sans-serif;
     font-size: 9.2px;
-    font-weight: 700;
-    letter-spacing: 0.65px;
-    border-left: 4px solid #D8A449;
+    font-weight: 600;
+    letter-spacing: 0.25px;
+    white-space: nowrap;
   }
-  .dc-gold { color: #FBE09B; }
+  .utc-lbl { color: #FBE09B; font-weight: 800; letter-spacing: 0.7px; }
+  .utc-t { color: #7EE0B5; font-weight: 800; }
 
   /* SHARED TOKENS */
-  .kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-family: "Avenir Next Condensed", "DIN Alternate", sans-serif;
-    font-size: 10.1px;
-    font-weight: 800;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-  }
-  .num-badge {
+  .pin-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     color: #FFFFFF;
     font-family: "Avenir Next", sans-serif;
-    font-size: 9px;
+    font-size: 8.4px;
     font-weight: 800;
     flex-shrink: 0;
   }
-  .beat-sq {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-top: 3px;
+  .tag-c {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 12.5px;
+    height: 12.5px;
+    border-radius: 2px;
+    background: #163F6B;
+    color: #FFFFFF;
+    font-family: "Avenir Next Condensed", sans-serif;
+    font-size: 8.2px;
+    font-weight: 800;
     flex-shrink: 0;
+    margin-top: 1px;
   }
-  .art-frame {
-    display: block;
-    width: 100%;
-    object-fit: cover;
-    border: 1px solid #9D937E;
+  .tag-q {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 12.5px;
+    height: 12.5px;
+    border-radius: 2px;
+    background: #9E1F24;
+    color: #FFFFFF;
+    font-family: "Avenir Next Condensed", sans-serif;
+    font-size: 8.4px;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-top: 1px;
   }
   .src {
     font-family: "Avenir Next Condensed", sans-serif;
-    font-size: 9.2px;
+    font-size: 8.7px;
     font-weight: 700;
-    color: #5A6475;
+    color: #556072;
     white-space: nowrap;
   }
-
-  /* TOP HERO SPREAD */
-  .hero-band {
-    display: grid;
-    grid-template-columns: 568px 414px;
-    gap: 12px;
-    border-bottom: 2px solid #121821;
-    padding-bottom: 5px;
-  }
-  .hero-lead {
+  .kicker {
     display: flex;
-    flex-direction: column;
-    gap: 3px;
-    border-right: 1px solid #C8BFA8;
-    padding-right: 11px;
-  }
-  .hero-lead .art-frame {
-    height: 164px;
-    object-position: center 62%;
-  }
-  .hero-lead-head {
-    font-family: "Iowan Old Style", "Charter", Georgia, serif;
-    font-size: 19.5px;
-    font-weight: 800;
-    line-height: 1.07;
-    letter-spacing: -0.2px;
-    color: #121821;
-  }
-  .hero-lead-body {
-    font-size: 10.6px;
-    line-height: 1.22;
-    color: #202938;
-  }
-
-  .hero-side {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-  .hero-side .art-frame {
-    height: 136px;
-  }
-  .ticker-bar {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    background: #141E2B;
-    color: #F4EFE4;
-    padding: 2.5px 7px;
+    gap: 4px;
     font-family: "Avenir Next Condensed", sans-serif;
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.35px;
-    border: 1px solid #121821;
-  }
-  .tick-up { color: #6BE0A8; }
-  .tick-dn { color: #FF8A85; }
-  .hero-side-head {
-    font-family: "Iowan Old Style", "Charter", Georgia, serif;
-    font-size: 16.5px;
+    font-size: 9.6px;
     font-weight: 800;
-    line-height: 1.09;
-    color: #121821;
-  }
-  .hero-side-body {
-    font-size: 10.4px;
-    line-height: 1.21;
-    color: #202938;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
   }
 
-  /* MIDDLE 3-COLUMN FEATURE BAND */
-  .mid-band {
+  /* BAND 3: TOP 4 ILLUSTRATED LEADS */
+  .leads-grid {
     display: grid;
-    grid-template-columns: 288px 394px 288px;
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 9px;
     border-bottom: 2px solid #121821;
     padding-bottom: 5px;
   }
-  .mid-col {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 5px;
-  }
-  .feat-card {
+  .lead-card {
     display: flex;
     flex-direction: column;
     gap: 2.5px;
-    background: #EFE9DA;
-    border: 1px solid #C8BFA8;
-    border-top: 3px solid #121821;
-    padding: 4px 7px 4.5px 7px;
+    border-right: 1px solid #C8BFA8;
+    padding-right: 9px;
   }
-  .feat-card .art-frame {
-    height: 92px;
+  .lead-card:last-child { border-right: none; padding-right: 0; }
+  .art-wrap {
+    position: relative;
+    width: 100%;
+    height: 82px;
+    border: 1px solid #8E846E;
+    overflow: hidden;
   }
-  .feat-head {
+  .art-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .art-note {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    background: rgba(18, 24, 33, 0.78);
+    color: #F6F2E9;
+    font-family: "Avenir Next Condensed", sans-serif;
+    font-size: 7.4px;
+    font-weight: 700;
+    letter-spacing: 0.35px;
+    padding: 1px 4px;
+  }
+  .lead-head {
     font-family: "Iowan Old Style", "Charter", Georgia, serif;
     font-size: 13px;
     font-weight: 800;
     line-height: 1.1;
     color: #121821;
   }
-  .feat-body {
-    font-size: 9.8px;
-    line-height: 1.2;
-    color: #212A39;
+  .lead-body {
+    font-size: 9.35px;
+    line-height: 1.19;
+    color: #1E2837;
   }
 
-  /* CENTER MAP COLUMN */
+  /* BAND 4: MIDDLE ATLAS + SPOTLIGHTS + AUDIT */
+  .mid-band {
+    display: grid;
+    grid-template-columns: 294px 396px 286px;
+    gap: 10px;
+    border-bottom: 2px solid #121821;
+    padding-bottom: 5px;
+    align-items: stretch;
+  }
+  .spot-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 4px;
+  }
+  .spot-card {
+    background: #EFE9DA;
+    border: 1px solid #C8BFA8;
+    border-left: 3px solid #121821;
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5px;
+  }
+  .spot-top {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .spot-title {
+    font-family: "Iowan Old Style", Georgia, serif;
+    font-size: 11.5px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: #121821;
+  }
+  .spot-body {
+    font-size: 9.25px;
+    line-height: 1.18;
+    color: #202938;
+  }
+
   .map-col {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 5px;
     border-left: 1px solid #C8BFA8;
     border-right: 1px solid #C8BFA8;
-    padding: 0 10px;
+    padding: 0 9px;
+    gap: 3.5px;
   }
-  .map-header {
+  .sec-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 2.5px;
   }
   .sec-title {
-    font-family: "Avenir Next Condensed", "DIN Alternate", sans-serif;
-    font-size: 10.8px;
+    font-family: "Avenir Next Condensed", sans-serif;
+    font-size: 10.6px;
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: 0.9px;
     color: #121821;
     text-transform: uppercase;
   }
   .sec-sub {
-    font-size: 9px;
+    font-size: 8.8px;
     font-weight: 700;
     color: #505A6B;
   }
   .legend {
     display: flex;
     justify-content: space-between;
-    flex-wrap: nowrap;
-    margin-top: 3.5px;
-    font-size: 8.4px;
+    font-size: 8.3px;
     font-weight: 700;
-    color: #2A3444;
+    color: #263142;
   }
-  .legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    white-space: nowrap;
-  }
-  .dot {
-    width: 6.5px;
-    height: 6.5px;
-    border-radius: 50%;
-    display: inline-block;
-  }
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 5px;
-  }
-  .stat-card {
-    background: #141E2B;
-    color: #F6F2E9;
-    padding: 4.5px 7px;
-    border-left: 3.5px solid #D8A449;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 1px;
-  }
-  .stat-val {
-    font-family: "Bodoni 72", "Iowan Old Style", Georgia, serif;
-    font-size: 15.5px;
-    font-weight: 800;
-    line-height: 1.02;
-    color: #FBE09B;
-    white-space: nowrap;
-  }
-  .stat-lbl {
-    font-family: "Avenir Next Condensed", sans-serif;
-    font-size: 8.8px;
-    font-weight: 700;
-    letter-spacing: 0.45px;
-    text-transform: uppercase;
-    color: #DCE3ED;
-    white-space: nowrap;
-  }
-  .key-line {
+  .leg-item { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+  .dot { width: 6.5px; height: 6.5px; border-radius: 50%; display: inline-block; }
+  .atlas-note {
     background: #EAE2D0;
     border: 1px solid #C8BFA8;
-    border-left: 3.5px solid #9E1F24;
     padding: 4px 7px;
-    font-size: 9.5px;
-    line-height: 1.2;
-    color: #1A2331;
+    font-size: 8.9px;
+    line-height: 1.18;
+    color: #1E2837;
   }
 
-  /* REGIONAL DISPATCHES DESK */
-  .dispatches-band {
+  .audit-col {
     display: flex;
     flex-direction: column;
-    gap: 3.5px;
-    flex: 1;
+    justify-content: space-between;
+    gap: 5px;
   }
-  .dispatches-head {
+  .mkt-box {
+    background: #141E2B;
+    color: #F6F2E9;
+    padding: 5px 7px;
+    border-top: 3px solid #D8A449;
+  }
+  .mkt-hdr {
+    font-family: "Avenir Next Condensed", sans-serif;
+    font-size: 9.6px;
+    font-weight: 800;
+    letter-spacing: 0.9px;
+    color: #FBE09B;
+    border-bottom: 1px solid #2D3D52;
+    padding-bottom: 2px;
+    margin-bottom: 4px;
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
-    border-bottom: 1px solid #C8BFA8;
-    padding-bottom: 2px;
   }
-  .desk-grid {
+  .mkt-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px 8px;
+    font-family: "Avenir Next Condensed", sans-serif;
+    font-size: 9.8px;
+    font-weight: 700;
   }
-  .desk-col {
+  .mkt-row { display: flex; justify-content: space-between; }
+  .up { color: #6BE0A8; }
+  .dn { color: #FF8A85; }
+  .audit-box {
+    background: #EAE2D0;
+    border: 1px solid #B8AD94;
+    border-left: 3.5px solid #9E1F24;
+    padding: 5px 7px;
     display: flex;
     flex-direction: column;
     gap: 3px;
-    padding: 0 8px;
-    border-right: 1px solid #C8BFA8;
+    flex: 1;
+    justify-content: center;
   }
-  .desk-col:first-child { padding-left: 0; }
-  .desk-col:last-child { padding-right: 0; border-right: none; }
-  .region-hdr {
+  .audit-hdr {
+    font-family: "Avenir Next Condensed", sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.75px;
+    color: #9E1F24;
+    text-transform: uppercase;
+  }
+  .audit-txt {
+    font-size: 8.95px;
+    line-height: 1.18;
+    color: #1A2331;
+  }
+  .key-strip {
+    background: #EFE9DA;
+    border: 1px solid #C8BFA8;
+    padding: 3.5px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 8.6px;
+    font-weight: 700;
+    color: #202938;
+  }
+  .key-group { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* BAND 5: GLOBAL WIRE DESK (3x2 REGIONAL GRID) */
+  .desk-band {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+  .desk-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .desk-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .reg-block {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border-right: 1px solid #C8BFA8;
+    padding-right: 11px;
+  }
+  .reg-block:last-child { border-right: none; padding-right: 0; }
+  .reg-hdr {
     font-family: "Avenir Next Condensed", sans-serif;
     font-size: 9.8px;
     font-weight: 800;
-    letter-spacing: 1px;
-    color: #163F6B;
-    border-bottom: 1.5px solid #121821;
-    padding-bottom: 1.5px;
+    letter-spacing: 0.9px;
+    color: #FFFFFF;
+    padding: 1.5px 6px;
+    display: flex;
+    justify-content: space-between;
     text-transform: uppercase;
   }
   .brief {
     display: flex;
-    gap: 5px;
     align-items: flex-start;
+    gap: 4px;
   }
-  .brief .num-badge {
-    width: 14px;
-    height: 14px;
-    font-size: 8.2px;
-    margin-top: 1px;
+  .brief-txt {
+    font-size: 8.95px;
+    line-height: 1.17;
+    color: #1C2534;
   }
-  .brief-text {
-    font-size: 9.25px;
-    line-height: 1.18;
-    color: #1E2837;
-  }
-  .brief-head {
-    font-weight: 800;
-    color: #121821;
-  }
+  .brief-hl { font-weight: 800; color: #121821; }
 
-  /* FOOTER FOLIO */
+  /* FOOTER */
   .footer-folio {
     margin-top: auto;
     border-top: 1.5px solid #121821;
-    padding-top: 2.5px;
+    padding-top: 2px;
     display: flex;
     justify-content: space-between;
     font-family: "Avenir Next Condensed", sans-serif;
-    font-size: 9px;
+    font-size: 8.8px;
     font-weight: 700;
-    letter-spacing: 0.55px;
-    color: #465061;
+    letter-spacing: 0.5px;
+    color: #424C5C;
   }
 </style>
 </head>
@@ -621,8 +651,8 @@ function buildHtml(): string {
   <div class="page">
     <header class="masthead">
       <div class="folio-strip">
-        <span>GLOBAL EDITION · SEVEN REGIONS &amp; SEAS · 22 WIRE DISPATCHES</span>
-        <span>DIPLOMACY · MARKETS · INT'L LAW · CULTURE · WAR · CLIMATE · SCIENCE · SPORT</span>
+        <span>GLOBAL FRONT PAGE · 7 REGIONS · 36 WIRE-SOURCED DISPATCHES</span>
+        <span>CONFIRMED (C) vs CLAIMED (?) TAGGED · EDITORIAL ILLUSTRATIONS (NOT NEWS PHOTOS)</span>
       </div>
       <div class="title-row">
         <h1 class="title-main">THE WORLD IN ONE DAY</h1>
@@ -633,218 +663,218 @@ function buildHtml(): string {
       </div>
     </header>
 
-    <div class="date-check-bar">
-      <span><em class="dc-gold" style="font-style:normal;">DATE CHECK:</em> ALL 22 DISPATCHES REPORTED 19 NOV 2026 (00:00–23:59 UTC) · ZERO ARCHIVE STORIES</span>
-      <span>12 ANCHOR PINS VERIFIED BY COORDINATE</span>
+    <div class="utc-strip">
+      <span class="utc-lbl">UTC TIMELINE (19 NOV):</span>
+      <span><b class="utc-t">00:00</b> NZ/AU GTA VI Rollout</span>
+      <span><b class="utc-t">04:00</b> Odisha Evacuations</span>
+      <span><b class="utc-t">07:00</b> Shenzhen 3-Way Statement</span>
+      <span><b class="utc-t">10:00</b> ICJ Genocide Verdict</span>
+      <span><b class="utc-t">13:00</b> COP31 Draft Outcry</span>
+      <span><b class="utc-t">14:30</b> Anthropic IPO ($83)</span>
+      <span><b class="utc-t">21:00</b> Dow 49,097 (-2.2%)</span>
     </div>
 
-    <section class="hero-band">
-      <article class="hero-lead">
-        <img class="art-frame" src="${artShenzhen}" alt="Three national flags at Kylin Villa round table overlooking Shenzhen Bay" />
-        <div class="kicker" style="color:#163F6B;">
-          <span class="num-badge" style="background:#163F6B;">1</span>
-          <span>DIPLOMACY LEAD · APEC SHENZHEN, CHINA</span>
+    <section class="leads-grid">
+      <article class="lead-card">
+        <div class="kicker" style="color:#165E4A;">
+          ${pinBadge(1, 'asia')} ${statusTag('C')} <span>SHENZHEN · DIPLOMACY</span>
         </div>
-        <h2 class="hero-lead-head">Trump, Xi &amp; Putin Hold Historic Three-Way Summit at Kylin Villa</h2>
-        <p class="hero-lead-body">Leaders of the US, China and Russia hold unprecedented round-table talks at Shenzhen Bay, issuing a four-point declaration on nuclear risk reduction, fuel supply and UN reform while omitting Ukraine and Iran; US-China bilateral talks yield no tariff extension <span class="src">[CNA/Al Jazeera/Guardian]</span>.</p>
+        <div class="art-wrap">
+          <img class="art-img" style="object-position:center 60%;" src="${artShenzhen}" alt="Summit table with US, China, Russia flags overlooking Shenzhen Bay" />
+          <span class="art-note">Editorial illustration</span>
+        </div>
+        <h2 class="lead-head">Trump, Xi &amp; Putin Issue Shenzhen Summit Statement</h2>
+        <p class="lead-body">APEC Kylin Villa talks yield 4-point pledge on nuclear risk, fuel supply &amp; UN reform while omitting Ukraine &amp; Iran; US-China tariff truce unchanged <span class="src">[CNA/Al Jazeera]</span>.</p>
       </article>
 
-      <article class="hero-side">
-        <img class="art-frame" src="${artAnthropic}" alt="Golden AI spire beside downward red market candles over Manhattan" />
-        <div class="ticker-bar">
-          <span>DOW 49,097 <em class="tick-dn" style="font-style:normal;">-2.2%</em></span>
-          <span>S&amp;P <em class="tick-dn" style="font-style:normal;">-2.0%</em></span>
-          <span>ANT $97.17 <em class="tick-up" style="font-style:normal;">+17%</em></span>
-          <span>BRENT $90.58 · GOLD $3,595</span>
+      <article class="lead-card">
+        <div class="kicker" style="color:#163F6B;">
+          ${pinBadge(2, 'europe')} ${statusTag('C')} <span>THE HAGUE · INT'L LAW</span>
         </div>
-        <div class="kicker" style="color:#9A550A;">
-          <span class="num-badge" style="background:#9A550A;">2</span>
-          <span>MARKETS &amp; AI · NEW YORK</span>
+        <div class="art-wrap">
+          <img class="art-img" src="${artIcj}" alt="Peace Palace and scales of justice" />
+          <span class="art-note">Editorial illustration</span>
         </div>
-        <h2 class="hero-side-head">Anthropic Sets $81.3B US IPO Record; Dow Drops Below 50,000</h2>
-        <p class="hero-side-body">Claude maker lists on Nasdaq as ANT ($83 IPO, opens $111.50, closes $97.17 near $1.5T), yet S&amp;P 500 falls 6th straight session (-2.02%), Dow drops 1,101 pts to 49,097 and Nvidia slides 3.3% post-CEO exit <span class="src">[Guardian/TradingView]</span>.</p>
+        <h2 class="lead-head">ICJ Rules Myanmar Guilty of Rohingya Genocide</h2>
+        <p class="lead-body">UN's top court holds a sovereign state accountable for genocide for the 1st time in its 80-year history (<em>The Gambia v. Myanmar</em>) <span class="src">[ICJ/CNN]</span>.</p>
+      </article>
+
+      <article class="lead-card">
+        <div class="kicker" style="color:#B34717;">
+          ${pinBadge(3, 'americas')} ${statusTag('C')} <span>NEW YORK · MARKETS &amp; AI</span>
+        </div>
+        <div class="art-wrap">
+          <img class="art-img" src="${artAnthropic}" alt="Golden AI spire beside downward market candles" />
+          <span class="art-note">Editorial illustration</span>
+        </div>
+        <h2 class="lead-head">Dow Drops Under 50,000; Record $81.3B AI IPO</h2>
+        <p class="lead-body">Dow falls 1,101 pts (-2.19%) to 49,097 &amp; S&amp;P logs 6th straight loss (-2.02%) as Anthropic (ANT) lists at $83 and closes $97.17 (+17%) <span class="src">[Guardian/PBS]</span>.</p>
+      </article>
+
+      <article class="lead-card">
+        <div class="kicker" style="color:#A12126;">
+          ${pinBadge(4, 'mideast')} ${pinBadge(5, 'asia')} ${statusTag('C')} <span>CLIMATE &amp; STORM</span>
+        </div>
+        <div class="art-wrap">
+          <img class="art-img" src="${artClimate}" alt="Cyclone vortex off eastern coastline" />
+          <span class="art-note">Editorial illustration</span>
+        </div>
+        <h2 class="lead-head">COP31 Drops Fossil Text; Cyclone Akvan Nears</h2>
+        <p class="lead-body">Antalya 2nd draft omits fossil-fuel phaseout as Panama warns of veto; India evacuates 100,000+ in Odisha &amp; Andhra ahead of 110 km/h gusts <span class="src">[CHN/Hindu]</span>.</p>
       </article>
     </section>
 
     <section class="mid-band">
-      <div class="mid-col">
-        <article class="feat-card" style="border-top-color:#244A73;">
-          <div class="kicker" style="color:#244A73;">
-            <span class="num-badge" style="background:#244A73;">3</span>
-            <span>INT'L LAW · THE HAGUE &amp; MYANMAR</span>
+      <div class="spot-col">
+        <div class="spot-card" style="border-left-color:#163F6B;">
+          <div class="spot-top">
+            ${pinBadge(6, 'europe')} ${statusTag('?')}
+            <span class="spot-title">Kerch Bridge Hit 3rd Time; Kyiv Drones</span>
           </div>
-          <img class="art-frame" src="${artIcj}" alt="Peace Palace and brass scales of justice" />
-          <h3 class="feat-head">ICJ Rules Myanmar Committed Rohingya Genocide</h3>
-          <p class="feat-body">UN court issues 1st state genocide judgment in 80-year history (<em>The Gambia v. Myanmar</em>) <span class="src">[ICJ/CNN]</span>.</p>
-        </article>
+          <p class="spot-body">Ukraine says strikes hit Crimean Bridge again; Moscow halts truce talks; Russian drones damage Kyiv cathedral <span class="src">[ISW/Guardian]</span>.</p>
+        </div>
 
-        <article class="feat-card" style="border-top-color:#632968;">
-          <div class="kicker" style="color:#632968;">
-            <span class="num-badge" style="background:#632968;">12</span>
-            <span>CULTURE · GLOBAL MIDNIGHT ROLLOUT</span>
+        <div class="spot-card" style="border-left-color:#A12126;">
+          <div class="spot-top">
+            ${pinBadge(7, 'mideast')} ${statusTag('?')}
+            <span class="spot-title">Hormuz Tanker Mines &amp; Gaza Raid</span>
           </div>
-          <img class="art-frame" src="${artGtavi}" alt="Retro coastal palm boulevard at sunset" />
-          <h3 class="feat-head">Grand Theft Auto VI Launches After 13 Years</h3>
-          <p class="feat-body">Drops from NZ westward on PS5/Xbox; Sensor Tower est. $2.36B and 24.6M Day-1 copies <span class="src">[Statesman]</span>.</p>
-        </article>
+          <p class="spot-body">IRGC claims supertankers struck mines in Strait; IDF says troops conducted a ground raid near central Gaza's Nuseirat <span class="src">[Al-Monitor/FDD]</span>.</p>
+        </div>
+
+        <div class="spot-card" style="border-left-color:#163F6B;">
+          <div class="spot-top">
+            ${pinBadge(8, 'europe')} ${statusTag('C')}
+            <span class="spot-title">Berlin Hosts 30+ European Leaders</span>
+          </div>
+          <p class="spot-body">Merz, Rutte &amp; Zelenskyy back EU + E5 (FR, DE, IT, PL, UK) talks seat; EU's Kallas summons Russian envoy <span class="src">[NATO/U24]</span>.</p>
+        </div>
+
+        <div class="spot-card" style="border-left-color:#5E2B6B;">
+          <div class="spot-top">
+            ${pinBadge(15, 'oceania')} ${statusTag('C')}
+            <span class="spot-title">Grand Theft Auto VI Launches Globally</span>
+          </div>
+          <p class="spot-body">Drops from NZ westward on PS5/Xbox after 13-yr wait; Sensor Tower est. $2.36B &amp; 24.6M Day-1 copies <span class="src">[Statesman]</span>.</p>
+        </div>
       </div>
 
       <div class="map-col">
         <div>
-          <div class="map-header">
+          <div class="sec-row" style="margin-bottom:2px;">
             <span class="sec-title">Global Story Atlas</span>
-            <span class="sec-sub">Anchors #1–#12 by coordinate</span>
+            <span class="sec-sub">#1–#16 by continent · #2 → Myanmar</span>
           </div>
           ${worldMap}
-          <div class="legend">
-            <span class="legend-item"><i class="dot" style="background:#163F6B;"></i>Diplomacy/Law</span>
-            <span class="legend-item"><i class="dot" style="background:#9A550A;"></i>Markets</span>
-            <span class="legend-item"><i class="dot" style="background:#A12126;"></i>War/Gulf</span>
-            <span class="legend-item"><i class="dot" style="background:#165E4A;"></i>Climate</span>
-            <span class="legend-item"><i class="dot" style="background:#632968;"></i>Culture</span>
+          <div class="legend" style="margin-top:3px;">
+            <span class="leg-item"><i class="dot" style="background:#B34717;"></i>Americas</span>
+            <span class="leg-item"><i class="dot" style="background:#163F6B;"></i>Europe</span>
+            <span class="leg-item"><i class="dot" style="background:#A12126;"></i>Mid-East</span>
+            <span class="leg-item"><i class="dot" style="background:#8A5A00;"></i>Africa</span>
+            <span class="leg-item"><i class="dot" style="background:#165E4A;"></i>Asia</span>
+            <span class="leg-item"><i class="dot" style="background:#5E2B6B;"></i>Oceania</span>
           </div>
         </div>
 
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-val">49,097</div>
-            <div class="stat-lbl">DOW DROPS &lt;50K</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-val">$81.3B</div>
-            <div class="stat-lbl">RECORD US IPO</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-val">100K+</div>
-            <div class="stat-lbl">AKVAN EVACUEES</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-val">1st Ever</div>
-            <div class="stat-lbl">ICJ GENOCIDE</div>
-          </div>
-        </div>
-
-        <div class="key-line">
-          <strong>19 Nov Picture:</strong> Historic UN court verdict, record Wall St AI IPO &amp; global Dow selloff alongside APEC big-power talks &amp; Cyclone Akvan threat.
+        <div class="atlas-note">
+          <strong>Map Coverage:</strong> Markers #1–#16 map each continent's headline stories (including Americas, Europe, Middle East, Africa, Asia &amp; Oceania) with zero unpinned regions.
         </div>
       </div>
 
-      <div class="mid-col">
-        <article class="feat-card" style="border-top-color:#A12126;">
-          <div class="kicker" style="color:#A12126;">
-            <span class="num-badge" style="background:#A12126;">4</span>
-            <span class="num-badge" style="background:#A12126;">5</span>
-            <span>WAR · UKRAINE &amp; HORMUZ</span>
+      <div class="audit-col">
+        <div class="mkt-box">
+          <div class="mkt-hdr"><span>19 NOV GLOBAL CLOSE</span><span>WIRE DATA</span></div>
+          <div class="mkt-grid">
+            <div class="mkt-row"><span>DOW</span><span class="dn">49,097 (-2.2%)</span></div>
+            <div class="mkt-row"><span>S&amp;P 500</span><span class="dn">7,176 (-2.0%)</span></div>
+            <div class="mkt-row"><span>NASDAQ</span><span class="dn">23,879 (-2.3%)</span></div>
+            <div class="mkt-row"><span>ANT IPO</span><span class="up">$97.17 (+17%)</span></div>
+            <div class="mkt-row"><span>BRENT</span><span class="up">$90.58 (+1.0%)</span></div>
+            <div class="mkt-row"><span>GOLD</span><span class="dn">$3,595 (-1.8%)</span></div>
           </div>
-          <img class="art-frame" src="${artConflict}" alt="Burning steel-arch bridge and oil tanker in narrow strait" />
-          <h3 class="feat-head">Kerch Bridge Hit 3rd Time; Hormuz Mines</h3>
-          <p class="feat-body">Ukraine strikes Crimea bridge &amp; Putin halts truce talks; Kyiv drone raid; IRGC tanker mine claims <span class="src">[Guardian/ISW]</span>.</p>
-        </article>
+        </div>
 
-        <article class="feat-card" style="border-top-color:#165E4A;">
-          <div class="kicker" style="color:#165E4A;">
-            <span class="num-badge" style="background:#165E4A;">6</span>
-            <span class="num-badge" style="background:#165E4A;">7</span>
-            <span>CLIMATE · ANTALYA &amp; INDIA</span>
-          </div>
-          <img class="art-frame" src="${artClimate}" alt="Cyclone vortex approaching eastern coastline" />
-          <h3 class="feat-head">COP31 Drops Fossil Text; Cyclone Akvan Nears</h3>
-          <p class="feat-body">Panama threatens veto over Antalya draft omission; 100K+ evacuated in Odisha &amp; Andhra <span class="src">[CHN/Hindu]</span>.</p>
-        </article>
+        <div class="audit-box">
+          <div class="audit-hdr">DATE-CHECK AUDIT · THU 19 NOV 2026</div>
+          <p class="audit-txt"><strong>Window Verified:</strong> All 36 reports occurred or closed on 19 Nov 2026 UTC across multi-wire sources.</p>
+          <p class="audit-txt"><strong>Excluded Pre-19 Nov:</strong> Voyager 1 light-day (17–18 Nov), Manila Quad summit (17 Nov) &amp; Qeshm strikes (17 Nov).</p>
+          <p class="audit-txt"><strong>Attribution Rule:</strong> Disputed strikes (#6 Kerch, #7 Hormuz/Gaza, Saudi intercepts) carry <span class="src">[Claimant]</span> &amp; <strong>?</strong> tag.</p>
+        </div>
+
+        <div class="key-strip">
+          <span class="key-group">${statusTag('C')} Confirmed (Court/Close/Off.)</span>
+          <span class="key-group">${statusTag('?')} Claimed / Attributed</span>
+        </div>
       </div>
     </section>
 
-    <section class="dispatches-band">
-      <div class="dispatches-head">
-        <span class="sec-title">Regional Dispatches Desk · Thursday 19 November 2026</span>
-        <span class="sec-sub">16 additional verified 19 Nov wire reports grouped by exact geography</span>
+    <section class="desk-band">
+      <div class="sec-row">
+        <span class="sec-title">Global Regional Desk · 28 Additional Wire-Sourced Reports (19 Nov 2026)</span>
+        <span class="sec-sub">North America · Latin America · Europe · Middle East · Africa · Asia-Pacific &amp; Health</span>
       </div>
-      <div class="desk-grid">
-        <div class="desk-col">
-          <div class="region-hdr">AMERICAS</div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#A12126;"></span>
-            <p class="brief-text"><span class="brief-head">US Cyber Ouster:</span> WH cyber chief Sean Cairncross removed after multi-day transport outages <span class="src">[Guardian]</span>.</p>
+      <div class="desk-rows">
+        <div class="desk-row">
+          <div class="reg-block">
+            <div class="reg-hdr" style="background:#B34717;"><span>NORTH AMERICA</span><span>5 ITEMS</span></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">US Cyber Ouster:</span> WH cyber chief Sean Cairncross removed after transport &amp; bank outages <span class="src">[Guardian]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Palantir Spy Case:</span> DOJ charges Russian national Igor Dyu with tracking defense-tech staff <span class="src">[DOJ]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Canada Auto Tariffs:</span> Min. LeBlanc warns no US deal ahead of Jan 50% auto tariff <span class="src">[Reuters]</span>.</p></div>
+            <div class="brief">${pinBadge(16, 'americas')}${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Surgical Robotics:</span> J&amp;J installs 1st commercial FDA-cleared OTTAVA system in Texas <span class="src">[J&amp;J]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Crypto &amp; Tech Selloff:</span> Bitcoin slides 1.8% to $61,953 as megacaps AMZN, GOOG &amp; META drop 3%+ <span class="src">[TradingKey]</span>.</p></div>
           </div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#A12126;"></span>
-            <p class="brief-text"><span class="brief-head">Palantir Spying:</span> DOJ charges Russian national Igor Dyu with spying on US analytics firm <span class="src">[DOJ]</span>.</p>
+
+          <div class="reg-block">
+            <div class="reg-hdr" style="background:#B34717;"><span>LATIN AMERICA</span><span>4 ITEMS</span></div>
+            <div class="brief">${pinBadge(9, 'americas')}${statusTag('C')}<p class="brief-txt"><span class="brief-hl">US–Ecuador Security:</span> Sec. Hegseth meets Pres. Noboa in Quito on joint maritime interdictions <span class="src">[War.gov]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Colombia Walkout:</span> National union strike disrupts transit across Bogotá, Medellín &amp; Cali <span class="src">[AP]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Chile–Philippines FTA:</span> Manila inks CEPA deal with Santiago at APEC — its 1st LatAm trade pact <span class="src">[BWorld]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Mexico Peso &amp; Brazil:</span> Peso slips past 19/USD; German FM visits VW São Paulo plants <span class="src">[Briefs/Time]</span>.</p></div>
           </div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#9A550A;"></span>
-            <p class="brief-text"><span class="brief-head">Canada &amp; MedTech:</span> Ottawa warns of 50% US auto tariff; J&amp;J installs 1st OTTAVA robot in TX <span class="src">[J&amp;J/Reuters]</span>.</p>
-          </div>
-          <div class="brief">
-            <span class="num-badge" style="background:#163F6B;">8</span>
-            <p class="brief-text"><span class="brief-head">Latin America:</span> Hegseth visits Ecuador's Noboa; Chile–Philippines ink CEPA FTA; peso &gt;19/$ <span class="src">[AP/BW]</span>.</p>
+
+          <div class="reg-block">
+            <div class="reg-hdr" style="background:#163F6B;"><span>EUROPE</span><span>5 ITEMS</span></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">IAEA Safeguards:</span> US, UK, France &amp; Germany rebuke Iran NPT compliance at Vienna Board <span class="src">[US Mission]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">EU Sovereign AI:</span> Deutsche Telekom invests €100M in Mistral AI Series D for EU cloud <span class="src">[Reuters]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Bomb-Threat Probe:</span> Police across FR, IT, ES, PL &amp; DE coordinate on school &amp; flight alerts <span class="src">[AP]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">EU Ukraine Aid:</span> Leaders weigh €45B Ukraine loan framework amid Winter grid pressure <span class="src">[Reuters]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Women's Cycling:</span> TotalEnergies exits men's WorldTour for 5-yr FDJ United-Suez women's deal <span class="src">[Sportcal]</span>.</p></div>
           </div>
         </div>
 
-        <div class="desk-col">
-          <div class="region-hdr">EUROPE &amp; MID-EAST</div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#163F6B;"></span>
-            <p class="brief-text"><span class="brief-head">Berlin Security Talks:</span> Merz, Macron &amp; UK/US envoys weigh Ukraine pledges; EU summons envoy <span class="src">[Al Jazeera]</span>.</p>
+        <div class="desk-row">
+          <div class="reg-block">
+            <div class="reg-hdr" style="background:#A12126;"><span>MIDDLE EAST</span><span>4 ITEMS</span></div>
+            <div class="brief">${statusTag('?')}<p class="brief-txt"><span class="brief-hl">Saudi Intercepts:</span> Coalition says air defenses downed Houthi drones &amp; missiles near border <span class="src">[CBS]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">OIC Gaza Call:</span> Iran FM Araghchi seeks emergency OIC ministerial session over Gaza crisis <span class="src">[PChron]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">UAE Storm &amp; Quake:</span> Heavy rains bring Fujairah &amp; RAK flood alerts alongside offshore tremor <span class="src">[National]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Illicit Gold Trade:</span> SWISSAID report traces 453t of undisclosed African gold into UAE hubs <span class="src">[SWISSAID]</span>.</p></div>
           </div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#9A550A;"></span>
-            <p class="brief-text"><span class="brief-head">EU AI &amp; Defense:</span> Deutsche Telekom backs Mistral AI (€100M) as Kyiv cathedral hit in raids <span class="src">[Kyiv Ind]</span>.</p>
-          </div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#A12126;"></span>
-            <p class="brief-text"><span class="brief-head">Gaza &amp; Gulf Fire:</span> IDF conducts central Gaza raid near Nuseirat; Saudis intercept Houthi fire <span class="src">[JustSec]</span>.</p>
-          </div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#244A73;"></span>
-            <p class="brief-text"><span class="brief-head">Global Health:</span> WHO pushes science trust drive; study maps GLP-1 weight limits <span class="src">[WHO/SciDaily]</span>.</p>
-          </div>
-        </div>
 
-        <div class="desk-col">
-          <div class="region-hdr">AFRICA</div>
-          <div class="brief">
-            <span class="num-badge" style="background:#163F6B;">9</span>
-            <p class="brief-text"><span class="brief-head">Nigeria Policing:</span> All 36 state legislatures approve constitutional path to state police <span class="src">[AllAfrica]</span>.</p>
+          <div class="reg-block">
+            <div class="reg-hdr" style="background:#8A5A00;"><span>AFRICA</span><span>5 ITEMS</span></div>
+            <div class="brief">${pinBadge(10, 'africa')}${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Nigeria Policing:</span> All 36 state assemblies ratify constitutional amendment for state police <span class="src">[AllAfrica]</span>.</p></div>
+            <div class="brief">${pinBadge(11, 'africa')}${statusTag('C')}<p class="brief-txt"><span class="brief-hl">South Africa Rates:</span> SARB holds 7.25% repo rate (5.2% CPI); hail hits Potchefstroom <span class="src">[SARB]</span>.</p></div>
+            <div class="brief">${pinBadge(12, 'africa')}${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Kenya Athletics:</span> AIU gives Olympic marathon winner Peres Jepchirchir 3-yr EPO ban <span class="src">[AIU/AJ]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Tech &amp; Trade Expos:</span> Cape Town Africa Tech Fest backs AI sovereignty; China-Africa Expo opens <span class="src">[EQS]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">ECOWAS Force:</span> Inspection team concludes readiness check of Nigerian units in Ondo &amp; Lagos <span class="src">[ECOWAS]</span>.</p></div>
           </div>
-          <div class="brief">
-            <span class="num-badge" style="background:#9A550A;">10</span>
-            <p class="brief-text"><span class="brief-head">South Africa:</span> SARB holds 7.25% repo rate (5.2% CPI); Cape Town Africa Tech Fest; hail hits <span class="src">[SARB/EQS]</span>.</p>
-          </div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#9A550A;"></span>
-            <p class="brief-text"><span class="brief-head">Illicit Gold Flow:</span> SWISSAID traces 453t of undisclosed African gold entering UAE markets <span class="src">[SWISSAID]</span>.</p>
-          </div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#632968;"></span>
-            <p class="brief-text"><span class="brief-head">Kenya Athletics:</span> AIU hands Olympic marathon champ Peres Jepchirchir a 3-yr EPO ban <span class="src">[AIU/AJ]</span>.</p>
-          </div>
-        </div>
 
-        <div class="desk-col">
-          <div class="region-hdr">ASIA-PAC &amp; SPACE</div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#163F6B;"></span>
-            <p class="brief-text"><span class="brief-head">APEC Bilaterals:</span> Japan PM Takaichi meets Xi; NZ PM Luxon condemns Ukraine invasion <span class="src">[Guardian/1News]</span>.</p>
-          </div>
-          <div class="brief">
-            <span class="num-badge" style="background:#244A73;">11</span>
-            <p class="brief-text"><span class="brief-head">South Korea Court:</span> Supreme Court overturns ex-PM Han Duck-soo's 15-yr sentence <span class="src">[Japan Times]</span>.</p>
-          </div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#632968;"></span>
-            <p class="brief-text"><span class="brief-head">Australia Walkleys:</span> Nick McKenzie wins Gold Walkley; Guardian wins two top prizes <span class="src">[Guardian]</span>.</p>
-          </div>
-          <div class="brief">
-            <span class="beat-sq" style="background:#244A73;"></span>
-            <p class="brief-text"><span class="brief-head">Deep Space &amp; Asia:</span> NASA marks Voyager 1 at 1 light-day (25.9B km); Taiwan -4.4% <span class="src">[NASA/Reuters]</span>.</p>
+          <div class="reg-block">
+            <div class="reg-hdr" style="background:#165E4A;"><span>ASIA-PACIFIC, OCEANIA &amp; HEALTH</span><span>5 ITEMS</span></div>
+            <div class="brief">${pinBadge(13, 'asia')}${statusTag('C')}<p class="brief-txt"><span class="brief-hl">South Korea Court:</span> Supreme Court overturns ex-PM Han Duck-soo's 15-yr sentence, orders retrial <span class="src">[JT]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">APEC Bilaterals:</span> Japan PM Takaichi meets Xi; NZ PM Luxon condemns Ukraine invasion <span class="src">[Guardian]</span>.</p></div>
+            <div class="brief">${pinBadge(14, 'asia')}${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Quake &amp; Chips:</span> M5.9 quake hits Indonesia's Flores region; Taiwan shares drop 4.4% <span class="src">[Ammon/Reuters]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">Walkleys &amp; Cricket:</span> Nick McKenzie wins Gold Walkley; BCCI gives HK Sixes fees to para cricket <span class="src">[BNN]</span>.</p></div>
+            <div class="brief">${statusTag('C')}<p class="brief-txt"><span class="brief-hl">WHO &amp; Obesity Science:</span> WHO backs science trust push; Alberta GLP-1 study flags metabolic shift <span class="src">[WHO]</span>.</p></div>
           </div>
         </div>
       </div>
     </section>
 
     <footer class="footer-folio">
-      <span>THURSDAY 19 NOVEMBER 2026 · GLOBAL DAILY FRONT PAGE</span>
-      <span>SOURCES: REUTERS · AP · CNN · GUARDIAN · AL JAZEERA · CNA · HINDU · UNFCCC · ICJ · NASA · WHO</span>
+      <span>THURSDAY 19 NOVEMBER 2026 · 36 WIRE-SOURCED STORIES · 7 REGIONS · EDITORIAL ILLUSTRATIONS (NOT NEWS PHOTOS)</span>
+      <span>REUTERS · AP · CNN · GUARDIAN · AL JAZEERA · CNA · HINDU · ICJ · NATO · WHO</span>
     </footer>
   </div>
 </body>
@@ -895,9 +925,9 @@ function render(): void {
     );
 
     const pngSize = statSync(tmpCandidatePng).size;
-    if (pngSize <= 960000) {
+    if (pngSize <= 1035000) {
       writeFileSync(OUT_ASSET, readFileSync(tmpCandidatePng));
-      console.log(`Rendered PNG ${OUT_ASSET}: ${pngSize} bytes`);
+      console.log(`Rendered lossless PNG ${OUT_ASSET}: ${pngSize} bytes`);
     } else {
       let encoded = false;
       for (const q of ['2', '3', '4', '5']) {

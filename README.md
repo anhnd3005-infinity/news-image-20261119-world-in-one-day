@@ -4,7 +4,7 @@
 [![rank](https://make.fun/badge/news-image-20261119/anhnd3005-infinity/news-image-20261119-world-in-one-day/rank.svg)](https://make.fun/bounty/news-image-20261119/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=news-image-20261119)
 [![reward](https://make.fun/badge/news-image-20261119/anhnd3005-infinity/news-image-20261119-world-in-one-day/reward.svg)](https://make.fun/bounty/news-image-20261119?utm_source=github&utm_medium=readme&utm_campaign=news-image-20261119)
 
-Editorial illustrated broadsheet front page summing up Thursday 19 November 2026's world news across seven regions and eight beats in one deterministic 1024x1024 image written to `/output/entry.png`, combining six bespoke gouache illustrations, a 12-anchor coordinate atlas, a date-check verification bar, and 22 wire-sourced dispatches.
+Editorial illustrated broadsheet front page summing up Thursday 19 November 2026's world news across seven regions and eight beats in one deterministic 1024x1024 image written to `/output/entry.png`, featuring a UTC timeline, date-check exclusion audit, Confirmed/Claimed provenance tags, 16-coordinate continent atlas, editorial illustrations, and 36 wire-sourced dispatches.
 
 ## Run it
 
